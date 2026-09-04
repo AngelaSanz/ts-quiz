@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taylor or Shakespeare?</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(255,255,255,.55), transparent 28%),
+      radial-gradient(circle at 85% 85%, rgba(255,255,255,.35), transparent 30%),
+      linear-gradient(135deg, #eee7df, #d8c8bd 48%, #e9dfd7);
+    color: #201b1d;
+    font-family: Inter, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+  }
+
+  .paper {
+    width: min(720px, 100%);
+    min-height: 650px;
+    background: rgba(255,252,248,.94);
+    border: 1px solid rgba(50,35,35,.15);
+    box-shadow: 0 24px 70px rgba(50,35,35,.20);
+    padding: 42px 42px 34px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .paper:before, .paper:after {
+    content: "";
+    position: absolute;
+    width: 130px; height: 130px;
+    border: 1px solid rgba(120,70,85,.25);
+    border-radius: 50%;
+  }
+  .paper:before { top: -80px; right: -55px; }
+  .paper:after { bottom: -90px; left: -55px; }
+
+  .topline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: #765c63;
+    margin-bottom: 34px;
+  }
+
+  h1, h2 {
+    font-family: "Cormorant Garamond", serif;
+    font-weight: 600;
+  }
+
+  h1 {
+    font-size: clamp(52px, 10vw, 88px);
+    line-height: .82;
+    margin: 0 0 22px;
+    letter-spacing: -.045em;
+  }
+
+  .amp { font-style: italic; color: #8a596b; }
+  .intro {
+    max-width: 540px;
+    line-height: 1.65;
+    color: #66575b;
+    margin-bottom: 38px;
+  }
+
+  button {
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  }
+  button:active { transform: scale(.98); }
+
+  .start {
+    background: #241d20;
+    color: white;
+    padding: 16px 28px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-size: 12px;
+    box-shadow: 0 10px 24px rgba(36,29,32,.18);
+  }
+  .start:hover { transform: translateY(-2px); }
+
+  .quiz { display: none; }
+  .progress {
+    height: 4px;
+    background: #e7ded9;
+    margin-bottom: 18px;
+  }
+  .bar {
+    height: 100%;
+    width: 0%;
+    background: #8a596b;
+    transition: width .3s ease;
+  }
+
+  .counter {
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: #8a596b;
+    margin-bottom: 34px;
+  }
+
+  .quote {
+    font-family: "Cormorant Garamond", serif;
+    font-size: clamp(32px, 6vw, 51px);
+    line-height: 1.02;
+    margin: 0 0 42px;
+    max-width: 620px;
+  }
+  .quote:before { content: "“"; color: #a98491; }
+  .quote:after { content: "”"; color: #a98491; }
+
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .choice {
+    background: #f3ece7;
+    color: #2c2527;
+    border: 1px solid #d9ccc6;
+    padding: 22px 15px;
+    font-family: "Cormorant Garamond", serif;
+    font-size: 24px;
+    font-weight: 600;
+  }
+  .choice:hover {
+    background: #e8dad7;
+    transform: translateY(-2px);
+  }
+  .choice.correct { background: #dce8dc; border-color: #8ba88d; }
+  .choice.wrong { background: #ead9d9; border-color: #b77c7c; }
+  .choice.disabled { cursor: default; }
+
+  .feedback {
+    min-height: 78px;
+    padding-top: 25px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #66575b;
+  }
+  .feedback strong {
+    display: block;
+    font-family: "Cormorant Garamond", serif;
+    font-size: 28px;
+    color: #30272a;
+  }
+
+  .next {
+    display: none;
+    margin-top: 5px;
+    background: #241d20;
+    color: #fff;
+    padding: 13px 22px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: 11px;
+  }
+
+  .result { display: none; }
+  .result-score {
+    font-family: "Cormorant Garamond", serif;
+    font-size: clamp(90px, 20vw, 150px);
+    line-height: .8;
+    color: #8a596b;
+    margin: 10px 0 30px;
+  }
+  .result h2 {
+    font-size: 50px;
+    margin: 0 0 15px;
+  }
+  .result p {
+    color: #66575b;
+    line-height: 1.65;
+    max-width: 520px;
+  }
+  .restart {
+    margin-top: 28px;
+    background: transparent;
+    border: 1px solid #b9aaa5;
+    padding: 13px 20px;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .shake { animation: shake .35s ease; }
+  @keyframes shake {
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-3px); }
+  }
+
+  @media (max-width: 560px) {
+    .paper { padding: 30px 23px 28px; min-height: 600px; }
+    .choices { grid-template-columns: 1fr; }
+    .quote { margin-bottom: 30px; }
+  }
+</style>
+</head>
+
+<body>
+<main class="paper">
+
+  <section class="intro-screen" id="intro">
+    <div class="topline">
+      <span>Literary Test</span>
+      <span>21 Questions</span>
+    </div>
+
+    <h1>Taylor<br><span class="amp">&</span> Shakespeare</h1>
+
+    <p class="intro">
+      Two writers. Two centuries. One suspiciously similar talent for
+      heartbreak, dramatic declarations and saying things that sound
+      much better than they should.
+      <br><br>
+      <strong>Can you tell who said what?</strong>
+    </p>
+
+    <button class="start" onclick="startQuiz()">Begin the test →</button>
+  </section>
+
+  <section class="quiz" id="quiz">
+    <div class="topline">
+      <span>Taylor or Shakespeare?</span>
+      <span id="scoreTop">0 correct</span>
+    </div>
+
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="counter" id="counter"></div>
+    <div class="quote" id="quote"></div>
+
+    <div class="choices">
+      <button class="choice" data-answer="Taylor" onclick="answer('Taylor')">Taylor Swift</button>
+      <button class="choice" data-answer="Shakespeare" onclick="answer('Shakespeare')">Shakespeare</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    <button class="next" id="next" onclick="nextQuestion()">Next →</button>
+  </section>
+
+  <section class="result" id="result">
+    <div class="topline">
+      <span>Test complete</span>
+      <span>Final score</span>
+    </div>
+
+    <div class="result-score" id="finalScore"></div>
+    <h2 id="resultTitle"></h2>
+    <p id="resultText"></p>
+    <button class="restart" onclick="location.reload()">Take it again</button>
+  </section>
+
+</main>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbw70GxAF8hfPPhiDPwISGZncG3s4uBVuIyQFqmyA_0vzkgsec2EWS4YyAlpdXBDPHoi/exec";
+const questions = [
+  ["Beauty is a beast that roars down in all fours demanding more", "Taylor"],
+  ["You kept me like a secret, I kept you like an oath", "Taylor"],
+  ["Men were deceivers ever", "Shakespeare"],
+  ["Picture me in the weeds, before i learned civility i used to scream ferociously anytime i wanted", "Taylor"],
+  ["My stars shine darkly over me", "Shakespeare"],
+  ["Wild winds are death to a candle", "Taylor"],
+  ["I'd meet you where the spirit meets the bones in a faith forgotten land", "Taylor"],
+  ["In black ink my love may still shine bright", "Shakespeare"],
+  ["Now you hang from my lips like the Gardens of Babylon", "Taylor"],
+  ["Now my eyes leak acid rain on the pillow where you used to lay your head", "Taylor"],
+  ["My tongue will tell the anger of my heart, or else my heart concealing it will break", "Shakespeare"],
+  ["Your touch brought forth an incandescent glow, tarnished but so grand", "Taylor"],
+  ["Love is merely a madness", "Shakespeare"],
+  ["How can it be said I am alone when all the world is here to look at me", "Shakespeare"],
+  ["And yet, to say the truth, reason and love keep little company together nowadays", "Shakespeare"],
+  ["I wish to know the fatal flaw that makes you long to be magnificently cursed", "Taylor"],
+  ["These violent delights have violent ends", "Shakespeare"],
+  ["If you tickle us do we not laugh? If you poison us do we not die?", "Shakespeare"],
+  ["I greet you with a battle hero's welcome. I take your indiscretions in good fun. I sit and listen.", "Taylor"],
+  ["But love is blind and lovers cannot see", "Shakespeare"],
+  ["Past the curses and cries, beyond the terror in the nightfall.", "Taylor"]
+];
+
+let current = 0;
+let score = 0;
+let answered = false;
+
+function startQuiz() {
+  document.getElementById("intro").style.display = "none";
+  document.getElementById("quiz").style.display = "block";
+  showQuestion();
+}
+
+function showQuestion() {
+  answered = false;
+  const [text, answer] = questions[current];
+
+  document.getElementById("counter").textContent =
+    String(current + 1).padStart(2, "0") + " / " + String(questions.length).padStart(2, "0");
+
+  document.getElementById("quote").textContent = text;
+  document.getElementById("bar").style.width =
+    ((current) / questions.length * 100) + "%";
+
+  document.getElementById("feedback").innerHTML = "";
+  document.getElementById("next").style.display = "none";
+
+  document.querySelectorAll(".choice").forEach(btn => {
+    btn.classList.remove("correct", "wrong", "disabled");
+    btn.disabled = false;
+  });
+}
+
+function answer(choice) {
+  if (answered) return;
+  answered = true;
+
+  const correct = questions[current][1];
+  const buttons = document.querySelectorAll(".choice");
+
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    btn.classList.add("disabled");
+    if (btn.dataset.answer === correct) btn.classList.add("correct");
+    if (btn.dataset.answer === choice && choice !== correct) btn.classList.add("wrong");
+  });
+
+  const feedback = document.getElementById("feedback");
+
+  if (choice === correct) {
+    score++;
+    document.getElementById("scoreTop").textContent = score + " correct";
+    feedback.innerHTML = `
+      <strong>Correct ✦</strong>
+      You have successfully passed the literary vibe check.
+    `;
+  } else {
+    feedback.innerHTML = `
+      <strong>Incorrect ✕</strong>
+      The answer was <b>${correct === "Taylor" ? "Taylor Swift" : "Shakespeare"}</b>.
+    `;
+    document.getElementById("quote").classList.add("shake");
+    setTimeout(() => document.getElementById("quote").classList.remove("shake"), 400);
+  }
+
+  document.getElementById("next").style.display = "inline-block";
+}
+
+function nextQuestion() {
+  current++;
+
+  if (current >= questions.length) {
+    showResult();
+  } else {
+    showQuestion();
+  }
+}
+
+function showResult() {
+  document.getElementById("quiz").style.display = "none";
+  document.getElementById("result").style.display = "block";
+
+  const percentage = score / questions.length;
+
+  document.getElementById("finalScore").textContent =
+    score + " / " + questions.length;
+
+  let title, text;
+
+  if (percentage === 1) {
+    title = "The Ultimate Swiftie Bard";
+    text = "21 out of 21. Shakespeare would applaud. Taylor would probably write a song about you. You may enter.";
+  } else if (percentage >= .85) {
+    title = "You may enter.";
+    text = "Impressive. You clearly know your Taylors from your Bards. Your literary credentials have been accepted.";
+  } else if (percentage >= .65) {
+    title = "Almost a masterpiece.";
+    text = "Not bad. You have survived the Elizabethan–Eras Tour crossover. We will allow you in.";
+  } else if (percentage >= .45) {
+    title = "Questionable credentials.";
+    text = "Honestly, some of those were difficult. But we're feeling generous. You may enter.";
+  } else {
+    title = "We need to talk.";
+    text = "You may have confused the Bard with the Blonde. Fortunately, this is a party and not an English Literature exam.";
+  }
+}
+</script>
+</body>
+</html>
