@@ -271,6 +271,13 @@
     .choices { grid-template-columns: 1fr; }
     .quote { margin-bottom: 30px; }
   }
+
+.leaderboard-wrap{margin-top:28px;text-align:left}
+.leaderboard-title{text-align:center;font-size:12px;letter-spacing:.18em;font-weight:700;margin-bottom:14px}
+.leaderboard-row{display:grid;grid-template-columns:42px 1fr 72px 72px;gap:8px;align-items:center;padding:11px 10px;border-bottom:1px solid #e8ded9;font-size:14px}
+.leaderboard-row.me{background:#f3ebe7}
+.leaderboard-rank{text-align:center;font-weight:700}
+.leaderboard-score,.leaderboard-time{text-align:right;font-variant-numeric:tabular-nums}
 </style>
 </head>
 
@@ -348,6 +355,10 @@
 </main>
 
 <script>
+let quizStartTime = null;
+let quizEndTime = null;
+let playerName = "";
+
 const API_URL = "https://script.google.com/macros/s/AKfycbw70GxAF8hfPPhiDPwISGZncG3s4uBVuIyQFqmyA_0vzkgsec2EWS4YyAlpdXBDPHoi/exec";
 const questions = [
   ["Beauty is a beast that roars down in all fours demanding more", "Taylor"],
@@ -382,19 +393,23 @@ let playerName = "";
 function startQuiz() {
   const input = document.getElementById("nameInput");
   const error = document.getElementById("nameError");
-  const name = input.value.trim();
+  const name = input ? input.value.trim() : "";
 
   if (!name) {
-    error.textContent = "Please enter your name before starting.";
-    input.focus();
+    if (error) error.textContent = "Please enter your name before starting.";
+    if (input) input.focus();
     return;
   }
 
-  error.textContent = "";
+  if (error) error.textContent = "";
   playerName = name;
+  quizStartTime = Date.now();
 
-  document.getElementById("intro").style.display = "none";
-  document.getElementById("quiz").style.display = "block";
+  const intro = document.getElementById("intro");
+  const quiz = document.getElementById("quiz");
+  if (intro) intro.style.display = "none";
+  if (quiz) quiz.style.display = "block";
+
   showQuestion();
 }
 
@@ -498,6 +513,110 @@ function showResult() {
     text = "You may have confused the Bard with the Blonde. Fortunately, this is a party and not an English Literature exam.";
   }
 }
+
+async function submitResultToGoogleSheets() {
+  const score = typeof correctAnswers !== "undefined"
+    ? correctAnswers
+    : (typeof scoreValue !== "undefined" ? scoreValue : 0);
+
+  const total = typeof questions !== "undefined"
+    ? questions.length
+    : 21;
+
+  const timeMs = Math.max(
+    0,
+    (quizEndTime || Date.now()) - (quizStartTime || Date.now())
+  );
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify({
+        name: playerName,
+        score: score,
+        total: total,
+        timeMs: timeMs
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.leaderboard) {
+      renderLeaderboard(data.leaderboard);
+    }
+
+    if (data.alreadySubmitted) {
+      const resultText = document.getElementById("resultText");
+      if (resultText) {
+        resultText.textContent =
+          "Your first attempt has already been recorded. The leaderboard shows your official result.";
+      }
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Could not save result:", error);
+    return null;
+  }
+}
+
+async function loadLeaderboard() {
+  try {
+    const response = await fetch(API_URL);
+    const data = await response.json();
+    if (data.leaderboard) renderLeaderboard(data.leaderboard);
+    return data;
+  } catch (error) {
+    console.error("Could not load leaderboard:", error);
+    return null;
+  }
+}
+
+
+function renderLeaderboard(rows) {
+  let container = document.getElementById("leaderboard");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "leaderboard";
+    const result = document.getElementById("results") || document.body;
+    result.appendChild(container);
+  }
+
+  const sorted = (rows || []).slice(0, 100);
+  const formatTime = ms => {
+    const seconds = Math.floor((Number(ms) || 0) / 1000);
+    const m = Math.floor(seconds / 60);
+    const s = String(seconds % 60).padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const myIndex = sorted.findIndex(r =>
+    String(r.name).trim().toLowerCase() === playerName.trim().toLowerCase()
+  );
+
+  container.innerHTML = `
+    <div class="leaderboard-wrap">
+      <div class="leaderboard-title">LEADERBOARD</div>
+      ${sorted.map((r, i) => `
+        <div class="leaderboard-row ${i === myIndex ? "me" : ""}">
+          <div class="leaderboard-rank">${i < 3 ? ["🥇","🥈","🥉"][i] : i + 1}</div>
+          <div>${escapeHtml(String(r.name))}</div>
+          <div class="leaderboard-score">${r.score}/${r.total}</div>
+          <div class="leaderboard-time">${formatTime(r.timeMs)}</div>
+        </div>
+      `).join("")}
+    </div>`;
+}
+
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+  }[c]));
+}
+
 </script>
 </body>
 </html>
