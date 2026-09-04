@@ -272,12 +272,93 @@
     .quote { margin-bottom: 30px; }
   }
 
-.leaderboard-wrap{margin-top:28px;text-align:left}
-.leaderboard-title{text-align:center;font-size:12px;letter-spacing:.18em;font-weight:700;margin-bottom:14px}
-.leaderboard-row{display:grid;grid-template-columns:42px 1fr 72px 72px;gap:8px;align-items:center;padding:11px 10px;border-bottom:1px solid #e8ded9;font-size:14px}
-.leaderboard-row.me{background:#f3ebe7}
-.leaderboard-rank{text-align:center;font-weight:700}
-.leaderboard-score,.leaderboard-time{text-align:right;font-variant-numeric:tabular-nums}
+
+.leaderboard-wrap{
+  margin-top:32px;
+  text-align:left;
+}
+.your-standing{
+  text-align:center;
+  margin:0 auto 28px;
+  padding:16px 20px 18px;
+  border-top:1px solid #d8c9c5;
+  border-bottom:1px solid #d8c9c5;
+}
+.your-standing-label{
+  font-size:10px;
+  letter-spacing:.2em;
+  font-weight:700;
+  color:#765c63;
+  margin-bottom:4px;
+}
+.your-standing-rank{
+  font-family:Georgia, "Times New Roman", serif;
+  font-size:30px;
+  color:#8a596b;
+}
+.leaderboard-title{
+  text-align:center;
+  font-family:Georgia, "Times New Roman", serif;
+  font-size:24px;
+  letter-spacing:.06em;
+  margin-bottom:3px;
+}
+.leaderboard-subtitle{
+  text-align:center;
+  font-size:12px;
+  font-style:italic;
+  color:#765c63;
+  margin-bottom:18px;
+}
+.leaderboard-header{
+  display:grid;
+  grid-template-columns:48px 1fr 82px 72px;
+  gap:8px;
+  padding:0 12px 8px;
+  border-bottom:1px solid #cdbfba;
+  font-size:9px;
+  letter-spacing:.16em;
+  font-weight:700;
+  color:#765c63;
+}
+.leaderboard-header span:nth-child(3),
+.leaderboard-header span:nth-child(4){
+  text-align:right;
+}
+.leaderboard-row{
+  display:grid;
+  grid-template-columns:48px 1fr 82px 72px;
+  gap:8px;
+  align-items:center;
+  padding:12px;
+  border-bottom:1px solid #e8ded9;
+  font-size:14px;
+}
+.leaderboard-row.me{
+  background:#f3ebe7;
+  box-shadow:inset 3px 0 0 #8a596b;
+}
+.leaderboard-rank{
+  text-align:center;
+  font-weight:700;
+  font-size:16px;
+}
+.leaderboard-name{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.leaderboard-score,
+.leaderboard-time{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.leaderboard-empty{
+  text-align:center;
+  padding:20px;
+  color:#765c63;
+}
+
 </style>
 </head>
 
@@ -361,10 +442,10 @@ let playerName = "";
 
 const API_URL = "https://script.google.com/macros/s/AKfycbw70GxAF8hfPPhiDPwISGZncG3s4uBVuIyQFqmyA_0vzkgsec2EWS4YyAlpdXBDPHoi/exec";
 const questions = [
-  ["Beauty is a beast that roars down in all fours demanding more", "Taylor"],
-  ["You kept me like a secret, I kept you like an oath", "Taylor"],
+  ["Beauty is a beast that roars down on all fours demanding more", "Taylor"],
+  ["You kept me like a secret but I kept you like an oath", "Taylor"],
   ["Men were deceivers ever", "Shakespeare"],
-  ["Picture me in the weeds, before i learned civility i used to scream ferociously anytime i wanted", "Taylor"],
+  ["Picture me in the weeds, before I learned civility I used to scream ferociously anytime I wanted", "Taylor"],
   ["My stars shine darkly over me", "Shakespeare"],
   ["Wild winds are death to a candle", "Taylor"],
   ["I'd meet you where the spirit meets the bones in a faith forgotten land", "Taylor"],
@@ -379,9 +460,9 @@ const questions = [
   ["I wish to know the fatal flaw that makes you long to be magnificently cursed", "Taylor"],
   ["These violent delights have violent ends", "Shakespeare"],
   ["If you tickle us do we not laugh? If you poison us do we not die?", "Shakespeare"],
-  ["I greet you with a battle hero's welcome. I take your indiscretions in good fun. I sit and listen.", "Taylor"],
+  ["I greet you with a battle hero's welcome. I take your indiscretions all in good fun. I sit and listen.", "Taylor"],
   ["But love is blind and lovers cannot see", "Shakespeare"],
-  ["Past the curses and cries, beyond the terror in the nightfall.", "Taylor"]
+  ["Past the curses and cries, beyond the terror in the nightfall", "Taylor"]
 ];
 
 let current = 0;
@@ -584,37 +665,95 @@ async function loadLeaderboard() {
 
 function renderLeaderboard(rows) {
   let container = document.getElementById("leaderboard");
+
   if (!container) {
     container = document.createElement("div");
     container.id = "leaderboard";
+
     const result = document.getElementById("result") || document.body;
     result.appendChild(container);
   }
 
-  const sorted = (rows || []).slice(0, 100);
-  const formatTime = ms => {
-    const seconds = Math.floor((Number(ms) || 0) / 1000);
-    const m = Math.floor(seconds / 60);
-    const s = String(seconds % 60).padStart(2, "0");
-    return `${m}:${s}`;
+  // Only show the Top 10.
+  const sorted = (rows || []).slice(0, 10);
+
+  // Convert milliseconds from Google Sheets into mm:ss.
+  const formatTime = (ms) => {
+    const totalSeconds = Math.floor((Number(ms) || 0) / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+    return `${minutes}:${seconds}`;
   };
 
-  const myIndex = sorted.findIndex(r =>
-    String(r.name).trim().toLowerCase() === playerName.trim().toLowerCase()
+  const myIndex = sorted.findIndex((r) =>
+    String(r.name).trim().toLowerCase() ===
+    playerName.trim().toLowerCase()
   );
+
+  let yourStanding = "";
+
+  if (myIndex !== -1) {
+    yourStanding = `
+      <div class="your-standing">
+        <div class="your-standing-label">YOUR FINAL STANDING</div>
+        <div class="your-standing-rank">#${myIndex + 1}</div>
+      </div>
+    `;
+  } else {
+    // The player is outside the Top 10.
+    // Their official result is still stored in Google Sheets.
+    const allRows = rows || [];
+    const fullIndex = allRows.findIndex((r) =>
+      String(r.name).trim().toLowerCase() ===
+      playerName.trim().toLowerCase()
+    );
+
+    if (fullIndex !== -1) {
+      yourStanding = `
+        <div class="your-standing">
+          <div class="your-standing-label">YOUR FINAL STANDING</div>
+          <div class="your-standing-rank">#${fullIndex + 1}</div>
+        </div>
+      `;
+    }
+  }
 
   container.innerHTML = `
     <div class="leaderboard-wrap">
-      <div class="leaderboard-title">LEADERBOARD</div>
-      ${sorted.map((r, i) => `
-        <div class="leaderboard-row ${i === myIndex ? "me" : ""}">
-          <div class="leaderboard-rank">${i < 3 ? ["🥇","🥈","🥉"][i] : i + 1}</div>
-          <div>${escapeHtml(String(r.name))}</div>
-          <div class="leaderboard-score">${r.score}/${r.total}</div>
-          <div class="leaderboard-time">${formatTime(r.timeMs)}</div>
-        </div>
-      `).join("")}
-    </div>`;
+      ${yourStanding}
+
+      <div class="leaderboard-title">THE LITERARY RANKINGS</div>
+      <div class="leaderboard-subtitle">Amongst tonight's scholars</div>
+
+      <div class="leaderboard-header">
+        <span></span>
+        <span>NAME</span>
+        <span>SCORE</span>
+        <span>TIME</span>
+      </div>
+
+      ${sorted.map((r, i) => {
+        const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
+        const rank = medal || (i + 1);
+        const isMe =
+          String(r.name).trim().toLowerCase() ===
+          playerName.trim().toLowerCase();
+
+        return `
+          <div class="leaderboard-row ${isMe ? "me" : ""}">
+            <div class="leaderboard-rank">${rank}</div>
+            <div class="leaderboard-name">${escapeHtml(String(r.name))}</div>
+            <div class="leaderboard-score">${r.score}/${r.total}</div>
+            <div class="leaderboard-time">${formatTime(r.timeMs)}</div>
+          </div>
+        `;
+      }).join("")}
+
+      ${sorted.length === 0 ? `
+        <div class="leaderboard-empty">No results yet.</div>
+      ` : ""}
+    </div>
+  `;
 }
 
 function escapeHtml(value) {
