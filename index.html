@@ -388,7 +388,7 @@ let current = 0;
 let score = 0;
 let answered = false;
 
-let playerName = "";
+
 
 function startQuiz() {
   const input = document.getElementById("nameInput");
@@ -486,6 +486,8 @@ function nextQuestion() {
 }
 
 function showResult() {
+  quizEndTime = Date.now();
+
   document.getElementById("quiz").style.display = "none";
   document.getElementById("result").style.display = "block";
 
@@ -512,12 +514,16 @@ function showResult() {
     title = "We need to talk.";
     text = "You may have confused the Bard with the Blonde. Fortunately, this is a party and not an English Literature exam.";
   }
+
+  document.getElementById("resultTitle").textContent = title;
+  document.getElementById("resultText").textContent = text;
+
+  // Save the first attempt and load the shared leaderboard.
+  submitResultToGoogleSheets();
 }
 
 async function submitResultToGoogleSheets() {
-  const score = typeof correctAnswers !== "undefined"
-    ? correctAnswers
-    : (typeof scoreValue !== "undefined" ? scoreValue : 0);
+  const scoreForSubmission = score;
 
   const total = typeof questions !== "undefined"
     ? questions.length
@@ -536,7 +542,7 @@ async function submitResultToGoogleSheets() {
       },
       body: JSON.stringify({
         name: playerName,
-        score: score,
+        score: scoreForSubmission,
         total: total,
         timeMs: timeMs
       })
@@ -581,7 +587,7 @@ function renderLeaderboard(rows) {
   if (!container) {
     container = document.createElement("div");
     container.id = "leaderboard";
-    const result = document.getElementById("results") || document.body;
+    const result = document.getElementById("result") || document.body;
     result.appendChild(container);
   }
 
